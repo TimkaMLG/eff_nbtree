@@ -12,7 +12,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  src/backend/access/nbtree/nbtree.c
+ *	  eff_nbtree/src/nbtree.c
  *
  *-------------------------------------------------------------------------
  */
