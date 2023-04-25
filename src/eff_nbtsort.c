@@ -61,7 +61,7 @@
 #include "tcop/tcopprot.h"		/* pgrminclude ignore */
 #include "utils/rel.h"
 #include "utils/sortsupport.h"
-#include "utils/tuplesort.h"
+#include "eff_tuplesort.h"
 
 
 /* Magic numbers for parallel state sharing */
