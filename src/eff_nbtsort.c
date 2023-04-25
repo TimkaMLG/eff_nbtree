@@ -1191,7 +1191,7 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 	TupleDesc	tupdes = RelationGetDescr(wstate->index);
 	int			i,
 				keysz = IndexRelationGetNumberOfKeyAttributes(wstate->index);
-	SortSupport sortKeys;
+	EffSortSupport sortKeys;
 	int64		tuples_done = 0;
 	bool		deduplicate;
 
@@ -1209,12 +1209,12 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 		itup = tuplesort_getindextuple(btspool->sortstate, true);
 		itup2 = tuplesort_getindextuple(btspool2->sortstate, true);
 
-		/* Prepare SortSupport data for each column */
-		sortKeys = (SortSupport) palloc0(keysz * sizeof(SortSupportData));
+		/* Prepare EffSortSupport data for each column */
+		sortKeys = (EffSortSupport) palloc0(keysz * sizeof(EffSortSupportData));
 
 		for (i = 0; i < keysz; i++)
 		{
-			SortSupport sortKey = sortKeys + i;
+			EffSortSupport sortKey = sortKeys + i;
 			ScanKey		scanKey = wstate->inskey->scankeys + i;
 			int16		strategy;
 
@@ -1231,7 +1231,7 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 			strategy = (scanKey->sk_flags & SK_BT_DESC) != 0 ?
 				BTGreaterStrategyNumber : BTLessStrategyNumber;
 
-			PrepareSortSupportFromIndexRel(wstate->index, strategy, sortKey);
+			PrepareEffSortSupportFromIndexRel(wstate->index, strategy, sortKey);
 		}
 
 		for (;;)
@@ -1248,7 +1248,7 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 
 				for (i = 1; i <= keysz; i++)
 				{
-					SortSupport entry;
+					EffSortSupport entry;
 					Datum		attrDatum1,
 								attrDatum2;
 					bool		isNull1,

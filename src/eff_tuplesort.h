@@ -18,8 +18,8 @@
  *
  *-------------------------------------------------------------------------
  */
-#ifndef TUPLESORT_H
-#define TUPLESORT_H
+#ifndef EFFTUPLESORT_H
+#define EFFTUPLESORT_H
 
 #include "access/itup.h"
 #include "executor/tuptable.h"
@@ -28,18 +28,18 @@
 
 
 /*
- * Tuplesortstate and Sharedsort are opaque types whose details are not
+ * EffTuplesortstate and EffSharedsort are opaque types whose details are not
  * known outside tuplesort.c.
  */
-typedef struct Tuplesortstate Tuplesortstate;
-typedef struct Sharedsort Sharedsort;
+typedef struct EffTuplesortstate EffTuplesortstate;
+typedef struct EffSharedsort EffSharedsort;
 
 /*
  * Tuplesort parallel coordination state, allocated by each participant in
  * local memory.  Participant caller initializes everything.  See usage notes
  * below.
  */
-typedef struct SortCoordinateData
+typedef struct EffSortCoordinateData
 {
 	/* Worker process?  If not, must be leader. */
 	bool		isWorker;
@@ -52,17 +52,17 @@ typedef struct SortCoordinateData
 	int			nParticipants;
 
 	/* Private opaque state (points to shared memory) */
-	Sharedsort *sharedsort;
-}			SortCoordinateData;
+	EffSharedsort *EffSharedsort;
+}			EffSortCoordinateData;
 
-typedef struct SortCoordinateData *SortCoordinate;
+typedef struct EffSortCoordinateData *EffSortCoordinate;
 
 /*
  * Data structures for reporting sort statistics.  Note that
- * TuplesortInstrumentation can't contain any pointers because we
+ * EffTuplesortInstrumentation can't contain any pointers because we
  * sometimes put it in shared memory.
  *
- * The parallel-sort infrastructure relies on having a zero TuplesortMethod
+ * The parallel-sort infrastructure relies on having a zero EffTuplesortMethod
  * to indicate that a worker never did anything, so we assign zero to
  * SORT_TYPE_STILL_IN_PROGRESS.  The other values of this enum can be
  * OR'ed together to represent a situation where different workers used
@@ -71,36 +71,36 @@ typedef struct SortCoordinateData *SortCoordinate;
  */
 typedef enum
 {
-	SORT_TYPE_STILL_IN_PROGRESS = 0,
-	SORT_TYPE_TOP_N_HEAPSORT = 1 << 0,
-	SORT_TYPE_QUICKSORT = 1 << 1,
-	SORT_TYPE_EXTERNAL_SORT = 1 << 2,
-	SORT_TYPE_EXTERNAL_MERGE = 1 << 3
-} TuplesortMethod;
+	EFF_SORT_TYPE_STILL_IN_PROGRESS = 0,
+	EFF_SORT_TYPE_TOP_N_HEAPSORT = 1 << 0,
+	EFF_SORT_TYPE_QUICKSORT = 1 << 1,
+	EFF_SORT_TYPE_EXTERNAL_SORT = 1 << 2,
+	EFF_SORT_TYPE_EXTERNAL_MERGE = 1 << 3
+} EffTuplesortMethod;
 
-#define NUM_TUPLESORTMETHODS 4
+#define EFF_NUM_TUPLESORTMETHODS 4
 
 typedef enum
 {
-	SORT_SPACE_TYPE_DISK,
-	SORT_SPACE_TYPE_MEMORY
-} TuplesortSpaceType;
+	EFF_SORT_SPACE_TYPE_DISK,
+	EFF_SORT_SPACE_TYPE_MEMORY
+} EffTuplesortSpaceType;
 
 /* Bitwise option flags for tuple sorts */
-#define TUPLESORT_NONE					0
+#define EFF_TUPLESORT_NONE					0
 
 /* specifies whether non-sequential access to the sort result is required */
-#define	TUPLESORT_RANDOMACCESS			(1 << 0)
+#define	EFF_TUPLESORT_RANDOMACCESS			(1 << 0)
 
 /* specifies if the tuplesort is able to support bounded sorts */
-#define TUPLESORT_ALLOWBOUNDED			(1 << 1)
+#define EFF_TUPLESORT_ALLOWBOUNDED			(1 << 1)
 
-typedef struct TuplesortInstrumentation
+typedef struct EffTuplesortInstrumentation
 {
-	TuplesortMethod sortMethod; /* sort algorithm used */
-	TuplesortSpaceType spaceType;	/* type of space spaceUsed represents */
+	EffTuplesortMethod sortMethod; /* sort algorithm used */
+	EffTuplesortSpaceType spaceType;	/* type of space spaceUsed represents */
 	int64		spaceUsed;		/* space consumption, in kB */
-} TuplesortInstrumentation;
+} EffTuplesortInstrumentation;
 
 
 /*
@@ -141,40 +141,40 @@ typedef struct TuplesortInstrumentation
  * worker processes:
  *
  * 1. Request tuplesort-private shared memory for n workers.  Use
- *    tuplesort_estimate_shared() to get the required size.
+ *    eff_tuplesort_estimate_shared() to get the required size.
  * 2. Have leader process initialize allocated shared memory using
- *    tuplesort_initialize_shared().  Launch workers.
+ *    eff_tuplesort_initialize_shared().  Launch workers.
  * 3. Initialize a coordinate argument within both the leader process, and
  *    for each worker process.  This has a pointer to the shared
  *    tuplesort-private structure, as well as some caller-initialized fields.
  *    Leader's coordinate argument reliably indicates number of workers
  *    launched (this is unused by workers).
- * 4. Begin a tuplesort using some appropriate tuplesort_begin* routine,
+ * 4. Begin a tuplesort using some appropriate eff_tuplesort_begin* routine,
  *    (passing the coordinate argument) within each worker.  The workMem
  *    arguments need not be identical.  All other arguments should match
  *    exactly, though.
- * 5. tuplesort_attach_shared() should be called by all workers.  Feed tuples
- *    to each worker, and call tuplesort_performsort() within each when input
+ * 5. eff_tuplesort_attach_shared() should be called by all workers.  Feed tuples
+ *    to each worker, and call eff_tuplesort_performsort() within each when input
  *    is exhausted.
- * 6. Call tuplesort_end() in each worker process.  Worker processes can shut
- *    down once tuplesort_end() returns.
- * 7. Begin a tuplesort in the leader using the same tuplesort_begin*
+ * 6. Call eff_tuplesort_end() in each worker process.  Worker processes can shut
+ *    down once eff_tuplesort_end() returns.
+ * 7. Begin a tuplesort in the leader using the same eff_tuplesort_begin*
  *    routine, passing a leader-appropriate coordinate argument (this can
  *    happen as early as during step 3, actually, since we only need to know
  *    the number of workers successfully launched).  The leader must now wait
  *    for workers to finish.  Caller must use own mechanism for ensuring that
  *    next step isn't reached until all workers have called and returned from
- *    tuplesort_performsort().  (Note that it's okay if workers have already
- *    also called tuplesort_end() by then.)
- * 8. Call tuplesort_performsort() in leader.  Consume output using the
- *    appropriate tuplesort_get* routine.  Leader can skip this step if
+ *    eff_tuplesort_performsort().  (Note that it's okay if workers have already
+ *    also called eff_tuplesort_end() by then.)
+ * 8. Call eff_tuplesort_performsort() in leader.  Consume output using the
+ *    appropriate eff_tuplesort_get* routine.  Leader can skip this step if
  *    tuplesort turns out to be unnecessary.
- * 9. Call tuplesort_end() in leader.
+ * 9. Call eff_tuplesort_end() in leader.
  *
  * This division of labor assumes nothing about how input tuples are produced,
  * but does require that caller combine the state of multiple tuplesorts for
  * any purpose other than producing the final output.  For example, callers
- * must consider that tuplesort_get_stats() reports on only one worker's role
+ * must consider that eff_tuplesort_get_stats() reports on only one worker's role
  * in a sort (or the leader's role), and not statistics for the sort as a
  * whole.
  *
@@ -183,16 +183,16 @@ typedef struct TuplesortInstrumentation
  * to produce the final sorted output).  Doing so only requires a second
  * "partial" tuplesort within the leader process, initialized like that of a
  * worker process.  The steps above don't touch on this directly.  The only
- * difference is that the tuplesort_attach_shared() call is never needed within
+ * difference is that the eff_tuplesort_attach_shared() call is never needed within
  * leader process, because the backend as a whole holds the shared fileset
- * reference.  A worker Tuplesortstate in leader is expected to do exactly the
+ * reference.  A worker EffTuplesortstate in leader is expected to do exactly the
  * same amount of total initial processing work as a worker process
- * Tuplesortstate, since the leader process has nothing else to do before
+ * EffTuplesortstate, since the leader process has nothing else to do before
  * workers finish.
  *
  * Note that only a very small amount of memory will be allocated prior to
  * the leader state first consuming input, and that workers will free the
- * vast majority of their memory upon returning from tuplesort_performsort().
+ * vast majority of their memory upon returning from eff_tuplesort_performsort().
  * Callers can rely on this to arrange for memory to be used in a way that
  * respects a workMem-style budget across an entire parallel sort operation.
  *
@@ -205,87 +205,87 @@ typedef struct TuplesortInstrumentation
  * generated (typically, caller uses a parallel heap scan).
  */
 
-extern Tuplesortstate *tuplesort_begin_heap(TupleDesc tupDesc,
+extern EffTuplesortstate *eff_tuplesort_begin_heap(TupleDesc tupDesc,
 											int nkeys, AttrNumber *attNums,
 											Oid *sortOperators, Oid *sortCollations,
 											bool *nullsFirstFlags,
-											int workMem, SortCoordinate coordinate,
+											int workMem, EffSortCoordinate coordinate,
 											int sortopt);
-extern Tuplesortstate *tuplesort_begin_cluster(TupleDesc tupDesc,
+extern EffTuplesortstate *eff_tuplesort_begin_cluster(TupleDesc tupDesc,
 											   Relation indexRel, int workMem,
-											   SortCoordinate coordinate,
+											   EffSortCoordinate coordinate,
 											   int sortopt);
-extern Tuplesortstate *tuplesort_begin_index_btree(Relation heapRel,
+extern EffTuplesortstate *eff_tuplesort_begin_index_btree(Relation heapRel,
 												   Relation indexRel,
 												   bool enforceUnique,
 												   bool uniqueNullsNotDistinct,
-												   int workMem, SortCoordinate coordinate,
+												   int workMem, EffSortCoordinate coordinate,
 												   int sortopt);
-extern Tuplesortstate *tuplesort_begin_index_hash(Relation heapRel,
+extern EffTuplesortstate *eff_tuplesort_begin_index_hash(Relation heapRel,
 												  Relation indexRel,
 												  uint32 high_mask,
 												  uint32 low_mask,
 												  uint32 max_buckets,
-												  int workMem, SortCoordinate coordinate,
+												  int workMem, EffSortCoordinate coordinate,
 												  int sortopt);
-extern Tuplesortstate *tuplesort_begin_index_gist(Relation heapRel,
+extern EffTuplesortstate *eff_tuplesort_begin_index_gist(Relation heapRel,
 												  Relation indexRel,
-												  int workMem, SortCoordinate coordinate,
+												  int workMem, EffSortCoordinate coordinate,
 												  int sortopt);
-extern Tuplesortstate *tuplesort_begin_datum(Oid datumType,
+extern EffTuplesortstate *eff_tuplesort_begin_datum(Oid datumType,
 											 Oid sortOperator, Oid sortCollation,
 											 bool nullsFirstFlag,
-											 int workMem, SortCoordinate coordinate,
+											 int workMem, EffSortCoordinate coordinate,
 											 int sortopt);
 
-extern void tuplesort_set_bound(Tuplesortstate *state, int64 bound);
-extern bool tuplesort_used_bound(Tuplesortstate *state);
+extern void eff_tuplesort_set_bound(EffTuplesortstate *state, int64 bound);
+extern bool eff_tuplesort_used_bound(EffTuplesortstate *state);
 
-extern void tuplesort_puttupleslot(Tuplesortstate *state,
+extern void eff_tuplesort_puttupleslot(EffTuplesortstate *state,
 								   TupleTableSlot *slot);
-extern void tuplesort_putheaptuple(Tuplesortstate *state, HeapTuple tup);
-extern void tuplesort_putindextuplevalues(Tuplesortstate *state,
+extern void eff_tuplesort_putheaptuple(EffTuplesortstate *state, HeapTuple tup);
+extern void eff_tuplesort_putindextuplevalues(EffTuplesortstate *state,
 										  Relation rel, ItemPointer self,
 										  Datum *values, bool *isnull);
-extern void tuplesort_putdatum(Tuplesortstate *state, Datum val,
+extern void eff_tuplesort_putdatum(EffTuplesortstate *state, Datum val,
 							   bool isNull);
 
-extern void tuplesort_performsort(Tuplesortstate *state);
+extern void eff_tuplesort_performsort(EffTuplesortstate *state);
 
-extern bool tuplesort_gettupleslot(Tuplesortstate *state, bool forward,
+extern bool eff_tuplesort_gettupleslot(EffTuplesortstate *state, bool forward,
 								   bool copy, TupleTableSlot *slot, Datum *abbrev);
-extern HeapTuple tuplesort_getheaptuple(Tuplesortstate *state, bool forward);
-extern IndexTuple tuplesort_getindextuple(Tuplesortstate *state, bool forward);
-extern bool tuplesort_getdatum(Tuplesortstate *state, bool forward,
+extern HeapTuple eff_tuplesort_getheaptuple(EffTuplesortstate *state, bool forward);
+extern IndexTuple eff_tuplesort_getindextuple(EffTuplesortstate *state, bool forward);
+extern bool eff_tuplesort_getdatum(EffTuplesortstate *state, bool forward,
 							   Datum *val, bool *isNull, Datum *abbrev);
 
-extern bool tuplesort_skiptuples(Tuplesortstate *state, int64 ntuples,
+extern bool eff_tuplesort_skiptuples(EffTuplesortstate *state, int64 ntuples,
 								 bool forward);
 
-extern void tuplesort_end(Tuplesortstate *state);
+extern void eff_tuplesort_end(EffTuplesortstate *state);
 
-extern void tuplesort_reset(Tuplesortstate *state);
+extern void eff_tuplesort_reset(EffTuplesortstate *state);
 
-extern void tuplesort_get_stats(Tuplesortstate *state,
-								TuplesortInstrumentation *stats);
-extern const char *tuplesort_method_name(TuplesortMethod m);
-extern const char *tuplesort_space_type_name(TuplesortSpaceType t);
+extern void eff_tuplesort_get_stats(EffTuplesortstate *state,
+								EffTuplesortInstrumentation *stats);
+extern const char *eff_tuplesort_method_name(EffTuplesortMethod m);
+extern const char *eff_tuplesort_space_type_name(EffTuplesortSpaceType t);
 
-extern int	tuplesort_merge_order(int64 allowedMem);
+extern int	eff_tuplesort_merge_order(int64 allowedMem);
 
-extern Size tuplesort_estimate_shared(int nworkers);
-extern void tuplesort_initialize_shared(Sharedsort *shared, int nWorkers,
+extern Size eff_tuplesort_estimate_shared(int nworkers);
+extern void eff_tuplesort_initialize_shared(EffSharedsort *shared, int nWorkers,
 										dsm_segment *seg);
-extern void tuplesort_attach_shared(Sharedsort *shared, dsm_segment *seg);
+extern void eff_tuplesort_attach_shared(EffSharedsort *shared, dsm_segment *seg);
 
 /*
  * These routines may only be called if TUPLESORT_RANDOMACCESS was specified
- * during tuplesort_begin_*.  Additionally backwards scan in gettuple/getdatum
+ * during eff_tuplesort_begin_*.  Additionally backwards scan in gettuple/getdatum
  * also require TUPLESORT_RANDOMACCESS.  Note that parallel sorts do not
  * support random access.
  */
-extern void tuplesort_rescan(Tuplesortstate *state);
-extern void tuplesort_markpos(Tuplesortstate *state);
-extern void tuplesort_restorepos(Tuplesortstate *state);
+extern void eff_tuplesort_rescan(EffTuplesortstate *state);
+extern void eff_tuplesort_markpos(EffTuplesortstate *state);
+extern void eff_tuplesort_restorepos(EffTuplesortstate *state);
 
-#endif							/* TUPLESORT_H */
+#endif							/* EFFTUPLESORT_H */

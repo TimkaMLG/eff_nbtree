@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * sortsupport.c
+ * EffSortSupport.c
  *	  Support routines for accelerated sorting.
  *
  *
@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  src/backend/utils/sort/sortsupport.c
+ *	  src/backend/utils/sort/EffSortSupport.c
  *
  *-------------------------------------------------------------------------
  */
@@ -38,10 +38,10 @@ typedef struct
  *
  * This is essentially an inlined version of FunctionCall2Coll(), except
  * we assume that the FunctionCallInfoBaseData was already mostly set up by
- * PrepareSortSupportComparisonShim.
+ * PrepareEffSortSupportComparisonShim.
  */
 static int
-comparison_shim(Datum x, Datum y, SortSupport ssup)
+comparison_shim(Datum x, Datum y, EffSortSupport ssup)
 {
 	SortShimExtra *extra = (SortShimExtra *) ssup->ssup_extra;
 	Datum		result;
@@ -66,7 +66,7 @@ comparison_shim(Datum x, Datum y, SortSupport ssup)
  * function as if it were a sort support comparator.
  */
 void
-PrepareSortSupportComparisonShim(Oid cmpFunc, SortSupport ssup)
+PrepareEffSortSupportComparisonShim(Oid cmpFunc, EffSortSupport ssup)
 {
 	SortShimExtra *extra;
 
@@ -87,25 +87,25 @@ PrepareSortSupportComparisonShim(Oid cmpFunc, SortSupport ssup)
 }
 
 /*
- * Look up and call sortsupport function to setup SortSupport comparator;
+ * Look up and call EffSortSupport function to setup EffSortSupport comparator;
  * or if no such function exists or it declines to set up the appropriate
  * state, prepare a suitable shim.
  */
 static void
-FinishSortSupportFunction(Oid opfamily, Oid opcintype, SortSupport ssup)
+FinishEffSortSupportFunction(Oid opfamily, Oid opcintype, EffSortSupport ssup)
 {
-	Oid			sortSupportFunction;
+	Oid			EffSortSupportFunction;
 
 	/* Look for a sort support function */
-	sortSupportFunction = get_opfamily_proc(opfamily, opcintype, opcintype,
+	EffSortSupportFunction = get_opfamily_proc(opfamily, opcintype, opcintype,
 											BTSORTSUPPORT_PROC);
-	if (OidIsValid(sortSupportFunction))
+	if (OidIsValid(EffSortSupportFunction))
 	{
 		/*
 		 * The sort support function can provide a comparator, but it can also
 		 * choose not to so (e.g. based on the selected collation).
 		 */
-		OidFunctionCall1(sortSupportFunction, PointerGetDatum(ssup));
+		OidFunctionCall1(EffSortSupportFunction, PointerGetDatum(ssup));
 	}
 
 	if (ssup->comparator == NULL)
@@ -120,19 +120,19 @@ FinishSortSupportFunction(Oid opfamily, Oid opcintype, SortSupport ssup)
 				 BTORDER_PROC, opcintype, opcintype, opfamily);
 
 		/* We'll use a shim to call the old-style btree comparator */
-		PrepareSortSupportComparisonShim(sortFunction, ssup);
+		PrepareEffSortSupportComparisonShim(sortFunction, ssup);
 	}
 }
 
 /*
- * Fill in SortSupport given an ordering operator (btree "<" or ">" operator).
+ * Fill in EffSortSupport given an ordering operator (btree "<" or ">" operator).
  *
- * Caller must previously have zeroed the SortSupportData structure and then
+ * Caller must previously have zeroed the EffSortSupportData structure and then
  * filled in ssup_cxt, ssup_collation, and ssup_nulls_first.  This will fill
  * in ssup_reverse as well as the comparator function pointer.
  */
 void
-PrepareSortSupportFromOrderingOp(Oid orderingOp, SortSupport ssup)
+PrepareEffSortSupportFromOrderingOp(Oid orderingOp, EffSortSupport ssup)
 {
 	Oid			opfamily;
 	Oid			opcintype;
@@ -147,20 +147,20 @@ PrepareSortSupportFromOrderingOp(Oid orderingOp, SortSupport ssup)
 			 orderingOp);
 	ssup->ssup_reverse = (strategy == BTGreaterStrategyNumber);
 
-	FinishSortSupportFunction(opfamily, opcintype, ssup);
+	FinishEffSortSupportFunction(opfamily, opcintype, ssup);
 }
 
 /*
- * Fill in SortSupport given an index relation, attribute, and strategy.
+ * Fill in EffSortSupport given an index relation, attribute, and strategy.
  *
- * Caller must previously have zeroed the SortSupportData structure and then
+ * Caller must previously have zeroed the EffSortSupportData structure and then
  * filled in ssup_cxt, ssup_attno, ssup_collation, and ssup_nulls_first.  This
  * will fill in ssup_reverse (based on the supplied strategy), as well as the
  * comparator function pointer.
  */
 void
-PrepareSortSupportFromIndexRel(Relation indexRel, int16 strategy,
-							   SortSupport ssup)
+PrepareEffSortSupportFromIndexRel(Relation indexRel, int16 strategy,
+							   EffSortSupport ssup)
 {
 	Oid			opfamily = indexRel->rd_opfamily[ssup->ssup_attno - 1];
 	Oid			opcintype = indexRel->rd_opcintype[ssup->ssup_attno - 1];
@@ -176,23 +176,23 @@ PrepareSortSupportFromIndexRel(Relation indexRel, int16 strategy,
 		elog(ERROR, "unexpected sort support strategy: %d", strategy);
 	ssup->ssup_reverse = (strategy == BTGreaterStrategyNumber);
 
-	FinishSortSupportFunction(opfamily, opcintype, ssup);
+	FinishEffSortSupportFunction(opfamily, opcintype, ssup);
 }
 
 /*
- * Fill in SortSupport given a GiST index relation
+ * Fill in EffSortSupport given a GiST index relation
  *
- * Caller must previously have zeroed the SortSupportData structure and then
+ * Caller must previously have zeroed the EffSortSupportData structure and then
  * filled in ssup_cxt, ssup_attno, ssup_collation, and ssup_nulls_first.  This
  * will fill in ssup_reverse (always false for GiST index build), as well as
  * the comparator function pointer.
  */
 void
-PrepareSortSupportFromGistIndexRel(Relation indexRel, SortSupport ssup)
+PrepareEffSortSupportFromGistIndexRel(Relation indexRel, EffSortSupport ssup)
 {
 	Oid			opfamily = indexRel->rd_opfamily[ssup->ssup_attno - 1];
 	Oid			opcintype = indexRel->rd_opcintype[ssup->ssup_attno - 1];
-	Oid			sortSupportFunction;
+	Oid			EffSortSupportFunction;
 
 	Assert(ssup->comparator == NULL);
 
@@ -204,10 +204,10 @@ PrepareSortSupportFromGistIndexRel(Relation indexRel, SortSupport ssup)
 	 * Look up the sort support function. This is simpler than for B-tree
 	 * indexes because we don't support the old-style btree comparators.
 	 */
-	sortSupportFunction = get_opfamily_proc(opfamily, opcintype, opcintype,
+	EffSortSupportFunction = get_opfamily_proc(opfamily, opcintype, opcintype,
 											GIST_SORTSUPPORT_PROC);
-	if (!OidIsValid(sortSupportFunction))
+	if (!OidIsValid(EffSortSupportFunction))
 		elog(ERROR, "missing support function %d(%u,%u) in opfamily %u",
 			 GIST_SORTSUPPORT_PROC, opcintype, opcintype, opfamily);
-	OidFunctionCall1(sortSupportFunction, PointerGetDatum(ssup));
+	OidFunctionCall1(EffSortSupportFunction, PointerGetDatum(ssup));
 }
