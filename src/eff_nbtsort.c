@@ -60,7 +60,7 @@
 #include "storage/smgr.h"
 #include "tcop/tcopprot.h"		/* pgrminclude ignore */
 #include "utils/rel.h"
-#include "utils/sortsupport.h"
+#include "eff_sortsupport.h"
 #include "eff_tuplesort.h"
 
 

@@ -15,7 +15,8 @@ OBJS = \
 	src/eff_nbtutils.o \
 	src/eff_nbtvalidate.o \
 	src/eff_nbtxlog.o \
-	src/eff_tuplesort.o
+	src/eff_tuplesort.o \
+	src/eff_sortsupport.o
 
 
 EXTENSION = eff_nbtree

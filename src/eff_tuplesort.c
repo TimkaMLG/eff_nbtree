@@ -115,7 +115,7 @@
 #include "utils/memutils.h"
 #include "utils/pg_rusage.h"
 #include "utils/rel.h"
-#include "utils/sortsupport.h"
+#include "eff_sortsupport.h"
 #include "eff_tuplesort.h"
 
 

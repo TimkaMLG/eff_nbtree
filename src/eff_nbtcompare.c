@@ -58,7 +58,7 @@
 #include <limits.h>
 
 #include "utils/builtins.h"
-#include "utils/sortsupport.h"
+#include "eff_sortsupport.h"
 
 #ifdef STRESS_SORT_INT_MIN
 #define A_LESS_THAN_B		INT_MIN
