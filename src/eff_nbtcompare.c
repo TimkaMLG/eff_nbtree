@@ -58,7 +58,7 @@
 #include <limits.h>
 
 #include "utils/builtins.h"
-#include "eff_sortsupport.h"
+#include "utils/sortsupport.h"
 
 #ifdef STRESS_SORT_INT_MIN
 #define A_LESS_THAN_B		INT_MIN
@@ -88,7 +88,7 @@ btint2cmp(PG_FUNCTION_ARGS)
 }
 
 static int
-btint2fastcmp(Datum x, Datum y, EffSortSupport ssup)
+btint2fastcmp(Datum x, Datum y, SortSupport ssup)
 {
 	int16		a = DatumGetInt16(x);
 	int16		b = DatumGetInt16(y);
@@ -97,9 +97,9 @@ btint2fastcmp(Datum x, Datum y, EffSortSupport ssup)
 }
 
 Datum
-btint2EffSortSupport(PG_FUNCTION_ARGS)
+btint2sortsupport(PG_FUNCTION_ARGS)
 {
-	EffSortSupport ssup = (EffSortSupport) PG_GETARG_POINTER(0);
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
 
 	ssup->comparator = btint2fastcmp;
 	PG_RETURN_VOID();
@@ -120,11 +120,11 @@ btint4cmp(PG_FUNCTION_ARGS)
 }
 
 Datum
-btint4EffSortSupport(PG_FUNCTION_ARGS)
+btint4sortsupport(PG_FUNCTION_ARGS)
 {
-	EffSortSupport ssup = (EffSortSupport) PG_GETARG_POINTER(0);
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
 
-	ssup->comparator = eff_ssup_datum_int32_cmp;
+	ssup->comparator = ssup_datum_int32_cmp;
 	PG_RETURN_VOID();
 }
 
@@ -144,7 +144,7 @@ btint8cmp(PG_FUNCTION_ARGS)
 
 #if SIZEOF_DATUM < 8
 static int
-btint8fastcmp(Datum x, Datum y, EffSortSupport ssup)
+btint8fastcmp(Datum x, Datum y, SortSupport ssup)
 {
 	int64		a = DatumGetInt64(x);
 	int64		b = DatumGetInt64(y);
@@ -159,12 +159,12 @@ btint8fastcmp(Datum x, Datum y, EffSortSupport ssup)
 #endif
 
 Datum
-btint8EffSortSupport(PG_FUNCTION_ARGS)
+btint8sortsupport(PG_FUNCTION_ARGS)
 {
-	EffSortSupport ssup = (EffSortSupport) PG_GETARG_POINTER(0);
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
 
 #if SIZEOF_DATUM >= 8
-	ssup->comparator = eff_ssup_datum_signed_cmp;
+	ssup->comparator = ssup_datum_signed_cmp;
 #else
 	ssup->comparator = btint8fastcmp;
 #endif
@@ -270,7 +270,7 @@ btoidcmp(PG_FUNCTION_ARGS)
 }
 
 static int
-btoidfastcmp(Datum x, Datum y, EffSortSupport ssup)
+btoidfastcmp(Datum x, Datum y, SortSupport ssup)
 {
 	Oid			a = DatumGetObjectId(x);
 	Oid			b = DatumGetObjectId(y);
@@ -284,9 +284,9 @@ btoidfastcmp(Datum x, Datum y, EffSortSupport ssup)
 }
 
 Datum
-btoidEffSortSupport(PG_FUNCTION_ARGS)
+btoidsortsupport(PG_FUNCTION_ARGS)
 {
-	EffSortSupport ssup = (EffSortSupport) PG_GETARG_POINTER(0);
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
 
 	ssup->comparator = btoidfastcmp;
 	PG_RETURN_VOID();

@@ -58,6 +58,7 @@ btvalidate(Oid opclassoid)
 	int			i;
 	ListCell   *lc;
 
+
 	/* Fetch opclass information */
 	classtup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassoid));
 	if (!HeapTupleIsValid(classtup))
@@ -67,6 +68,14 @@ btvalidate(Oid opclassoid)
 	opfamilyoid = classform->opcfamily;
 	opcintype = classform->opcintype;
 	opclassname = NameStr(classform->opcname);
+
+	/* Check that the index key is of integer type */
+    if (opcintype != INT4OID)
+    {
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("nbtree index only supports integer values")));
+    }
 
 	/* Fetch opfamily information */
 	familytup = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfamilyoid));

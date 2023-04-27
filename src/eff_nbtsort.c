@@ -60,8 +60,8 @@
 #include "storage/smgr.h"
 #include "tcop/tcopprot.h"		/* pgrminclude ignore */
 #include "utils/rel.h"
-#include "eff_sortsupport.h"
-#include "eff_tuplesort.h"
+#include "utils/sortsupport.h"
+#include "utils/tuplesort.h"
 
 
 /* Magic numbers for parallel state sharing */
@@ -1191,7 +1191,7 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 	TupleDesc	tupdes = RelationGetDescr(wstate->index);
 	int			i,
 				keysz = IndexRelationGetNumberOfKeyAttributes(wstate->index);
-	EffSortSupport sortKeys;
+	SortSupport sortKeys;
 	int64		tuples_done = 0;
 	bool		deduplicate;
 
@@ -1210,11 +1210,11 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 		itup2 = tuplesort_getindextuple(btspool2->sortstate, true);
 
 		/* Prepare EffSortSupport data for each column */
-		sortKeys = (EffSortSupport) palloc0(keysz * sizeof(EffSortSupportData));
+		sortKeys = (SortSupport) palloc0(keysz * sizeof(SortSupportData));
 
 		for (i = 0; i < keysz; i++)
 		{
-			EffSortSupport sortKey = sortKeys + i;
+			SortSupport sortKey = sortKeys + i;
 			ScanKey		scanKey = wstate->inskey->scankeys + i;
 			int16		strategy;
 
@@ -1231,7 +1231,7 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 			strategy = (scanKey->sk_flags & SK_BT_DESC) != 0 ?
 				BTGreaterStrategyNumber : BTLessStrategyNumber;
 
-			PrepareEffSortSupportFromIndexRel(wstate->index, strategy, sortKey);
+			PrepareSortSupportFromIndexRel(wstate->index, strategy, sortKey);
 		}
 
 		for (;;)
@@ -1248,7 +1248,7 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 
 				for (i = 1; i <= keysz; i++)
 				{
-					EffSortSupport entry;
+					SortSupport entry;
 					Datum		attrDatum1,
 								attrDatum2;
 					bool		isNull1,

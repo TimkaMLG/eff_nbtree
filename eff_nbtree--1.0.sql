@@ -14,12 +14,13 @@ CREATE ACCESS METHOD eff_nbtree TYPE INDEX HANDLER eff_nbtreehandler;
 COMMENT ON ACCESS METHOD eff_nbtree IS 'eff_nbtree index access method';
 
 
-CREATE OPERATOR CLASS cube_ops
-    DEFAULT FOR TYPE cube USING eff_nbtree AS
-        OPERATOR        1       < ,
-        OPERATOR        2       <= ,
-        OPERATOR        3       = ,
-        OPERATOR        4       >= ,
-        OPERATOR        5       > ,
-        FUNCTION        1       cube_cmp(cube, cube);
-   
+CREATE OPERATOR CLASS int4_ops
+DEFAULT FOR TYPE int4 USING eff_nbtree
+AS
+    OPERATOR        1       <,
+    OPERATOR        2       <=,
+    OPERATOR        3       =,
+    OPERATOR        4       >=,
+    OPERATOR        5       >,
+    FUNCTION        1       btint4cmp(int4,int4),
+STORAGE         int4;
