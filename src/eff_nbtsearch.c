@@ -345,6 +345,7 @@ _bt_binsrch(Relation rel,
 				high;
 	int32		result,
 				cmpval;
+				result = 0;
 
 	page = BufferGetPage(buf);
 	opaque = BTPageGetOpaque(page);
@@ -391,7 +392,7 @@ _bt_binsrch(Relation rel,
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = _bt_compare(rel, key, page, mid);
+		result = (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData)))) - (*((int*)(key->scankeys)));
 
 		if (result >= cmpval)
 			low = mid + 1;
@@ -504,7 +505,7 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = _bt_compare(rel, key, page, mid);
+		result = (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData)))) - (*((int*)(key->scankeys)));
 
 		if (result >= cmpval)
 			low = mid + 1;
