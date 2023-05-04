@@ -344,8 +344,9 @@ _bt_binsrch(Relation rel,
 	OffsetNumber low,
 				high;
 	int32		result,
-				cmpval;
-				result = 0;
+				cmpval,
+				scanval;
+
 
 	page = BufferGetPage(buf);
 	opaque = BTPageGetOpaque(page);
@@ -386,13 +387,15 @@ _bt_binsrch(Relation rel,
 	
 	/*here is my first comment in postgres*/
 
+	scanval = (*((int*)(key->scankeys)));
+
 	while (high > low)
 	{
 		OffsetNumber mid = low + ((high - low) / 2);
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData)))) - (*((int*)(key->scankeys)));
+		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData))));
 
 		if (result >= cmpval)
 			low = mid + 1;
@@ -451,7 +454,8 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 				high,
 				stricthigh;
 	int32		result,
-				cmpval;
+				cmpval,
+				scanval;
 
 	page = BufferGetPage(insertstate->buf);
 	opaque = BTPageGetOpaque(page);
@@ -499,13 +503,15 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 
 	cmpval = 1;					/* !nextkey comparison value */
 
+	scanval = (*((int*)(key->scankeys)));
+
 	while (high > low)
 	{
 		OffsetNumber mid = low + ((high - low) / 2);
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData)))) - (*((int*)(key->scankeys)));
+		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData))));
 
 		if (result >= cmpval)
 			low = mid + 1;
