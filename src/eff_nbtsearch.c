@@ -387,7 +387,7 @@ _bt_binsrch(Relation rel,
 	
 	/*here is my first comment in postgres*/
 
-	scanval = (*((int*)(key->scankeys)));
+	scanval = DatumGetInt32(key->scankeys->sk_argument);
 
 	while (high > low)
 	{
@@ -395,7 +395,7 @@ _bt_binsrch(Relation rel,
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData))));
+		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)))));
 
 		if (result >= cmpval)
 			low = mid + 1;
@@ -503,7 +503,7 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 
 	cmpval = 1;					/* !nextkey comparison value */
 
-	scanval = (*((int*)(key->scankeys)));
+	scanval = DatumGetInt32(key->scankeys->sk_argument);
 
 	while (high > low)
 	{
@@ -511,7 +511,7 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)) + sizeof(ItemIdData))));
+		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)))));
 
 		if (result >= cmpval)
 			low = mid + 1;
