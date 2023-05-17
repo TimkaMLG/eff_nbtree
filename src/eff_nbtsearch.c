@@ -341,11 +341,16 @@ _bt_binsrch(Relation rel,
 {
 	Page		page;
 	BTPageOpaque opaque;
+	TupleDesc itupdesc = RelationGetDescr(rel);
+	IndexTuple itup;
+	Datum datum;
 	OffsetNumber low,
 				high;
 	int32		result,
 				cmpval,
-				scanval;
+				scanval,
+				val;
+	bool isNull;
 
 
 	page = BufferGetPage(buf);
@@ -395,7 +400,11 @@ _bt_binsrch(Relation rel,
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)))));
+		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, mid));
+		datum = index_getattr(itup, 1, itupdesc, &isNull);
+		val = DatumGetInt32(datum);
+
+		result = scanval - val;
 
 		if (result >= cmpval)
 			low = mid + 1;
@@ -450,12 +459,18 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 	BTScanInsert key = insertstate->itup_key;
 	Page		page;
 	BTPageOpaque opaque;
+	TupleDesc itupdesc = RelationGetDescr(rel);
+	IndexTuple itup;
+	Datum datum;
 	OffsetNumber low,
 				high,
 				stricthigh;
 	int32		result,
 				cmpval,
-				scanval;
+				scanval,
+				val;
+	bool        isNull;
+	
 
 	page = BufferGetPage(insertstate->buf);
 	opaque = BTPageGetOpaque(page);
@@ -511,7 +526,11 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 
 		/* We have low <= mid < high, so mid points at a real slot */
 
-		result = scanval - (*((int*)(PageGetItem(page, PageGetItemId(page, mid)))));
+		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, mid));
+		datum = index_getattr(itup, 1, itupdesc, &isNull);
+		val = DatumGetInt32(datum);
+
+		result = scanval - val;
 
 		if (result >= cmpval)
 			low = mid + 1;
