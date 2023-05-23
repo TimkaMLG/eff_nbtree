@@ -341,16 +341,16 @@ _bt_binsrch(Relation rel,
 {
 	Page		page;
 	BTPageOpaque opaque;
-	TupleDesc itupdesc = RelationGetDescr(rel);
+	// TupleDesc itupdesc = RelationGetDescr(rel);
 	IndexTuple itup;
-	Datum datum;
 	OffsetNumber low,
 				high;
 	int32		result,
 				cmpval,
 				scanval,
 				val;
-	bool isNull;
+	// bool isNull;
+	char 		*tupdata;
 
 
 	page = BufferGetPage(buf);
@@ -392,7 +392,7 @@ _bt_binsrch(Relation rel,
 	
 	/*here is my first comment in postgres*/
 
-	scanval = DatumGetInt32(key->scankeys->sk_argument);
+	scanval = (int32) (key->scankeys->sk_argument);
 
 	while (high > low)
 	{
@@ -401,10 +401,14 @@ _bt_binsrch(Relation rel,
 		/* We have low <= mid < high, so mid points at a real slot */
 
 		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, mid));
-		datum = index_getattr(itup, 1, itupdesc, &isNull);
-		val = DatumGetInt32(datum);
+		// val = (int32) (index_getattr(itup, 1, itupdesc, &isNull)); // Standart method to get int32
+
+		tupdata = (char *)itup + IndexInfoFindDataOffset(itup->t_info);
+		val = *((int32 *)tupdata); // Faster method to get int32
 
 		result = scanval - val;
+
+		// result = _bt_compare(rel, key, page, mid); // Default function
 
 		if (result >= cmpval)
 			low = mid + 1;
@@ -459,9 +463,8 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 	BTScanInsert key = insertstate->itup_key;
 	Page		page;
 	BTPageOpaque opaque;
-	TupleDesc itupdesc = RelationGetDescr(rel);
+	// TupleDesc itupdesc = RelationGetDescr(rel);
 	IndexTuple itup;
-	Datum datum;
 	OffsetNumber low,
 				high,
 				stricthigh;
@@ -469,7 +472,8 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 				cmpval,
 				scanval,
 				val;
-	bool        isNull;
+	// bool        isNull;
+	char		*tupdata;
 	
 
 	page = BufferGetPage(insertstate->buf);
@@ -518,7 +522,7 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 
 	cmpval = 1;					/* !nextkey comparison value */
 
-	scanval = DatumGetInt32(key->scankeys->sk_argument);
+	scanval = (int32) (key->scankeys->sk_argument);
 
 	while (high > low)
 	{
@@ -527,10 +531,15 @@ _bt_binsrch_insert(Relation rel, BTInsertState insertstate)
 		/* We have low <= mid < high, so mid points at a real slot */
 
 		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, mid));
-		datum = index_getattr(itup, 1, itupdesc, &isNull);
-		val = DatumGetInt32(datum);
+		// val = (int32) (index_getattr(itup, 1, itupdesc, &isNull)); // Basic method to get int32
+
+		tupdata = (char *)itup + IndexInfoFindDataOffset(itup->t_info);
+		val = *((int32 *)tupdata); // Faster method to get int32
+
 
 		result = scanval - val;
+
+		// result = _bt_compare(rel, key, page, mid); // Default function
 
 		if (result >= cmpval)
 			low = mid + 1;

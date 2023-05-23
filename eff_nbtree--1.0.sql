@@ -22,5 +22,9 @@ AS
     OPERATOR        3       =,
     OPERATOR        4       >=,
     OPERATOR        5       >,
-    FUNCTION        1       btint4cmp(int4,int4),
+    FUNCTION        1       btint4cmp(int4, int4) ,
+    FUNCTION        2       btint4sortsupport(internal) ,
+    FUNCTION        3       in_range(int4, int4, int4, boolean, boolean) ,
+    FUNCTION        4       btequalimage(oid) ,
+
 STORAGE         int4;
